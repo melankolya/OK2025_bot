@@ -118,7 +118,7 @@ def duel(message):
         return
 
     # Определяем длительность мута
-    mute_duration = random.randint(1, 60)  # 1 минута или 10 минут
+    mute_duration = random.randint(60, 1200)  # 1 минута или 10 минут
 
     # Отправляем сообщение о победителе
     bot.reply_to(
@@ -593,6 +593,9 @@ def sosal(message):
 def daddy(message):
     bot.reply_to(message, "@melankolya")
 
+@bot.message_handler(commands=['granny', 'бабуля'])
+def granny(message):
+    bot.reply_to(message, "@enniuum")
 
 @bot.message_handler(commands=["help"])
 def show_help(message):
