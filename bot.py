@@ -595,6 +595,9 @@ def daddy(message):
 
 @bot.message_handler(commands=['granny', 'бабуля'])
 def granny(message):
+    if message.from_user.username == "enniuum":
+        bot.reply_to(message, "Ой привет любимая бабуля! Я всегда рад с тобой пообщаться!")
+        return
     bot.reply_to(message, "@enniuum")
 
 @bot.message_handler(commands=["help"])
