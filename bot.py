@@ -8,6 +8,7 @@ import pytz
 from config import ALLOWED_USERS, BACKGROUND_IMAGE, CHAT_ID, COLOR_NAME, COLOR_TEXT, DATA_FILE, FONT_NAME, FONT_SIZE_NAME, FONT_SIZE_TEXT, FONT_TEXT, MEDIA_FOLDER, RIGHT_NOW_FILE, TOKEN
 from data import members, metro_lines, metro_stations, TIME_VARIANTS, THOUGHTFUL_PHRASES, savee_data
 import telebot
+from telebot.types import ChatPermissions
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import re
@@ -78,10 +79,132 @@ def send_member_info(message, member):
         f"📞 Телефон: {member['phone']}\n"
         f"📧 Почта: {member['email']}\n"
         f"💬 Telegram: {member['telegram']}\n"
-        f"🚇 Станция метро: {member['metro']}"
+        f"🚇 Станция метро: {member['metro']}\n"
+        f"Интересный факт про Лилю (она очень просила добавить): в 8 лет чуть не утонула в лягушатнике (детском бассейне в школе)"
     )
     bot.reply_to(message, info)
 
+@bot.message_handler(commands=["дуэль"])
+def duel(message):
+    if not message.reply_to_message:
+        bot.reply_to(message, "Команду нужно использовать ответом на сообщение.")
+        return
+
+    challenger = message.from_user  # Автор команды
+    opponent = message.reply_to_message.from_user  # Тот, на кого ответили
+
+    if challenger.id == opponent.id:
+        bot.reply_to(message, "Ты не можешь вызвать дуэль сам с собой!")
+        return
+
+    # Определяем Telegram usernames участников
+    challenger_telegram = f"@{challenger.username}" if challenger.username else None
+    opponent_telegram = f"@{opponent.username}" if opponent.username else None
+
+    # Получаем их first name из списка members
+    challenger_name = next((m["first_name"] for m in members if m["telegram"] == challenger_telegram), challenger.first_name)
+    opponent_name = next((m["first_name"] for m in members if m["telegram"] == opponent_telegram), opponent.first_name)
+
+    # Выбираем случайного победителя
+    winner, loser = random.sample([(challenger, challenger_name), (opponent, opponent_name)], 2)
+    loser_telegram = f"@{loser[0].username}" if loser[0].username else None
+
+    if loser_telegram in ALLOWED_USERS:
+        bot.reply_to(
+            message,
+            f"💥 Дуэль состоялась! Победитель — {winner[1]}!\n"
+            f"🎭 {loser[1]} проиграл, но ему прощается эта дуэль!"
+        )
+        return
+
+    # Определяем длительность мута
+    mute_duration = random.randint(1, 60)  # 1 минута или 10 минут
+
+    # Отправляем сообщение о победителе
+    bot.reply_to(
+        message,
+        f"💥 Дуэль состоялась! Победитель — {winner[1]}!\n"
+        f"😵 {loser[1]} проиграл и получает мут на {mute_duration // 60} минут!"
+    )
+
+    # Блокируем проигравшего
+    try:
+        bot.restrict_chat_member(
+            message.chat.id,
+            loser[0].id,
+            until_date=int(time.time()) + mute_duration,
+            can_send_messages=False,
+            can_send_media_messages=False,
+            can_send_other_messages=False,
+            can_add_web_page_previews=False
+        )
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка при блокировке: {e}")
+
+@bot.message_handler(commands=["мут"])
+def mute_command(message):
+    if message.from_user.username and f"@{message.from_user.username}" not in ALLOWED_USERS:
+        bot.reply_to(message, "🚫 У вас нет прав на использование этой команды!")
+        return
+
+    if not message.reply_to_message:
+        bot.reply_to(message, "⚠ Нужно ответить на сообщение пользователя, которого хотите замьютить!")
+        return
+
+    user_id = message.reply_to_message.from_user.id
+    username = f"@{message.reply_to_message.from_user.username}" if message.reply_to_message.from_user.username else None
+
+    # Спецпроверка для @samolil
+    if username in ALLOWED_USERS:
+        bot.reply_to(message, f"🎭 {username} не подвержен муту!")
+        return
+
+    # Если мутящий находится в списке ALLOWED_USERS, то мут на 1 минуту, иначе на 10 минут
+    mute_time = 600  # 1 минута или 10 минут
+    until_timestamp = int(time.time()) + mute_time
+
+    try:
+        bot.restrict_chat_member(
+            chat_id=message.chat.id,
+            user_id=user_id,
+            permissions=telebot.types.ChatPermissions(can_send_messages=False),
+            until_date=until_timestamp
+        )
+        bot.reply_to(message, f"🔇 {message.reply_to_message.from_user.first_name} замьючен на {mute_time // 60} минут!")
+    except Exception as e:
+        bot.reply_to(message, f"⚠ Ошибка при муте: {e}")
+
+
+@bot.message_handler(commands=["анмут"])
+def unmute_command(message):
+    if message.from_user.username and f"@{message.from_user.username}" not in ALLOWED_USERS:
+        bot.reply_to(message, "🚫 У вас нет прав на использование этой команды!")
+        return
+
+    if not message.reply_to_message:
+        bot.reply_to(message, "⚠ Нужно ответить на сообщение пользователя, которого хотите размьютить!")
+        return
+
+    user_id = message.reply_to_message.from_user.id
+
+    try:
+        bot.restrict_chat_member(
+            chat_id=message.chat.id,
+            user_id=user_id,
+            permissions=telebot.types.ChatPermissions(
+                can_send_messages=True,
+                can_send_media_messages=True,
+                can_send_polls=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_change_info=True,
+                can_invite_users=True,
+                can_pin_messages=True
+            )
+        )
+        bot.reply_to(message, f"🔊 {message.reply_to_message.from_user.first_name} теперь может говорить!")
+    except Exception as e:
+        bot.reply_to(message, f"⚠ Ошибка при размьюте: {e}")
 
 @bot.message_handler(func=lambda message: re.search(r'\bспокойной\b.*\bночи\b.*\bоки\b', message.text, re.IGNORECASE))
 def good_morning_kvs(message):
@@ -759,6 +882,6 @@ while True:
     except KeyboardInterrupt:
         print("Бот остановлен вручную.")
         break  # Выходим из цикла, если нажато Ctrl + C
-    except:
-        print(f"Ошибка соединения")
+    except Exception as e:
+        print(f"⚠ Ошибка: {e}")  # Выводим текст ошибки
         time.sleep(10)  # Ждём 10 секунд перед новым запуском
