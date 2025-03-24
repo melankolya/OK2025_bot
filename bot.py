@@ -883,16 +883,6 @@ def filter_by_zodiac(message):
     
     bot.reply_to(message, response)
     
-while True:
-    try:
-        bot.polling(none_stop=True, timeout=60)
-    except KeyboardInterrupt:
-        print("Бот остановлен вручную.")
-        break  # Выходим из цикла, если нажато Ctrl + C
-    except Exception as e:
-        print(f"⚠ Ошибка: {e}")  # Выводим текст ошибки
-        time.sleep(10)  # Ждём 10 секунд перед новым запуском
-        
 @bot.message_handler(func=lambda message: message.reply_to_message is not None)
 def auto_respect(message):
     reply_user = message.reply_to_message.from_user.username
@@ -913,3 +903,15 @@ def auto_respect(message):
         member["respect"] += 1
         bot.reply_to(message, f"Спасибо на хлеб не намажешь, а дополнительный балл - это всегда приятно. {member['first_name']}, \nТеперь у тебя {member['respect']} балл(-ов)!")
     savee_data()
+    
+
+while True:
+    try:
+        bot.polling(none_stop=True, timeout=60)
+    except KeyboardInterrupt:
+        print("Бот остановлен вручную.")
+        break  # Выходим из цикла, если нажато Ctrl + C
+    except Exception as e:
+        print(f"⚠ Ошибка: {e}")  # Выводим текст ошибки
+        time.sleep(10)  # Ждём 10 секунд перед новым запуском
+        
