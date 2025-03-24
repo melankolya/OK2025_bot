@@ -524,7 +524,6 @@ def change_respect(message):
             bot.reply_to(message, f"ГНЕВ ПАПОЧКИ! Свети ярче, {member['first_name']}... \nТеперь у тебя {member['respect']} балл(-ов).")
     savee_data()
 
-
 @bot.message_handler(commands=["рейтинг", "ranking"])
 def show_respect_ranking(message):
     sorted_members = sorted(members, key=lambda m: m.get("respect", 0), reverse=True)
@@ -632,19 +631,12 @@ def generate_quote_image(text, author_name):
     font_text = ImageFont.truetype(FONT_TEXT, FONT_SIZE_TEXT)
     font_name = ImageFont.truetype(FONT_NAME, FONT_SIZE_NAME)
 
-    # Позиции текста
-    text_x = img_width * 0.05  # Отступ слева
-    text_y = img_height * 0.25  # Четверть изображения вверх
-
-    name_x = img_width * 0.25  # Чуть левее середины
-    name_y = img_height - 180  # Внизу изображения
-
     # Ограничиваем длину текста
-    text = text[:200] + "..." if len(text) > 200 else text
+    text = text[:200] + "..." if len(text) > 300 else text
     text = f"«{text}»"  # Добавляем ёлочные кавычки
 
     # Разбиваем цитату на строки, если она слишком длинная
-    max_width = img_width * 0.9
+    max_width = img_width * 0.55
     lines = []
     words = text.split()
     current_line = ""
@@ -657,23 +649,32 @@ def generate_quote_image(text, author_name):
             current_line = word
     lines.append(current_line)
 
-    # Рисуем цитату (по левому краю)
-    y_offset = text_y
-    for line in lines:
-        draw.text((text_x, y_offset), line, font=font_text, fill=COLOR_TEXT)
-        y_offset += FONT_SIZE_TEXT * 1.2  # Межстрочный интервал
+    # Вычисляем высоту блока текста
+    total_text_height = len(lines) * FONT_SIZE_TEXT * 1.2
+    text_y = (img_height - total_text_height) / 2 - 70  # Центрируем по вертикали
 
-    # Рисуем имя (увеличенное и сдвинутое влево)
-    if len(author_name) > 15:
-        draw.text((name_x, name_y), author_name, font=ImageFont.truetype(FONT_NAME, FONT_SIZE_NAME*0.9), fill=COLOR_NAME)
-    else:
-        draw.text((name_x, name_y), author_name, font=font_name, fill=COLOR_NAME)
+    # Рисуем цитату (с выравниванием по центру)
+    for line in lines:
+        text_width = draw.textbbox((0, 0), line, font=font_text)[2]
+        text_x = (img_width - text_width) / 2  # Центрируем по горизонтали
+        draw.text((text_x, text_y), line, font=font_text, fill=COLOR_TEXT)
+        text_y += FONT_SIZE_TEXT * 1.2  # Межстрочный интервал
+
+    # Позиция имени автора (без изменений)
+    if "None" in author_name:
+        author_name = author_name[:-5]
+    name_width = draw.textbbox((0, 0), author_name, font=font_name)[2]
+    name_x = img_width - name_width - 200  # 80 пикселей от правого края
+    name_y = img_height - 150  # Внизу изображения
+
+    draw.text((name_x, name_y), author_name, font=font_name, fill=COLOR_NAME)
 
     # Сохраняем в буфер
     output = BytesIO()
     img.save(output, format="PNG")
     output.seek(0)
     return output
+
 
 # Команда /цитата
 @bot.message_handler(commands=["цитата", "quote"])
@@ -891,3 +892,24 @@ while True:
     except Exception as e:
         print(f"⚠ Ошибка: {e}")  # Выводим текст ошибки
         time.sleep(10)  # Ждём 10 секунд перед новым запуском
+        
+@bot.message_handler(func=lambda message: message.reply_to_message is not None)
+def auto_respect(message):
+    reply_user = message.reply_to_message.from_user.username
+    sender_user = message.from_user.username
+
+    if not reply_user or not sender_user or (reply_user == sender_user and sender_user != "melankolya"):
+        return  # Игнорируем, если не удалось определить пользователей или это самореспект
+
+    member = next((m for m in members if m['telegram'].strip('@') == reply_user), None)
+    if not member:
+        return  # Игнорируем, если пользователя нет в списке
+
+    if "respect" not in member:
+        member["respect"] = 0  
+    
+    text = message.text.lower()
+    if any(word in text for word in ["+", "❤️", "пасиб", "спс", "благодар", "респект"]):
+        member["respect"] += 1
+        bot.reply_to(message, f"Спасибо на хлеб не намажешь, а дополнительный балл - это всегда приятно. {member['first_name']}, \nТеперь у тебя {member['respect']} балл(-ов)!")
+    savee_data()
