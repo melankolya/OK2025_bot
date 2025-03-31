@@ -899,6 +899,17 @@ def auto_respect(message):
         member["respect"] = 0  
     
     text = message.text.lower()
+    if text == "а":
+        lyrics = [
+            "А-А-А-А, О-О-О-О",
+            "140 — СКОРОСТЬ НА КРАЙ СВЕТА В НАПРАВЛЕНИИ ВЕТРА",
+            "А-А-А-А, О-О-О-О",
+            "БЫЛИ СВЯЗАННЫЕ ЛЕНТОЙ КРАСНОГО ЗАКАТА"
+        ]
+        for line in lyrics:
+            bot.send_message(message.chat.id, line)
+            time.sleep(7)
+        return
     if any(word in text for word in ["+", "❤️", "пасиб", "спс", "благодар", "респект"]):
         member["respect"] += 1
         bot.reply_to(message, f"Спасибо на хлеб не намажешь, а дополнительный балл - это всегда приятно. {member['first_name']}, \nТеперь у тебя {member['respect']} балл(-ов)!")
