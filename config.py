@@ -13,5 +13,5 @@ RIGHT_NOW_FILE = "right_now.json"
 ALLOWED_USERS = {
     "@satisha", "@skoltukofia", "@funt_a", "@ankaberezina",
     "@samolil", "@dreaminginadream", "@soffiivarr",
-    "@enniuum", "@melankolya"
+    "@enniuum"
 }
